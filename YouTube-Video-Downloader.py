@@ -1,11 +1,12 @@
 import streamlit as st
 import subprocess
 import yt_dlp
+import os
 
-# Page config for title and icon
+# Page config
 st.set_page_config(page_title="YouTube Downloader", layout="centered")
 
-# CSS to prevent button text wrapping and add bold style
+# CSS Styling
 st.markdown(
     """
     <style>
@@ -18,17 +19,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Logo at the top
+# YouTube Logo
 st.image("https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg", width=150)
 
-# Header and subtitle
+# Title and Subtitle
 st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>YouTube Video Downloader</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:#555; font-size:18px;'>Download videos or audio in your preferred quality</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Input columns for URL and quality select
+# Input columns for URL and quality
 col1, col2 = st.columns([4, 3])
-
 with col1:
     url = st.text_input("Enter YouTube URL", placeholder="https://youtube.com/...")
 with col2:
@@ -40,7 +40,7 @@ with col2:
 # Optional filename input
 filename = st.text_input("Optional: Set output filename (without extension)")
 
-# Show video info if URL is given and valid
+# Show video info
 if url:
     try:
         ydl_opts = {}
@@ -59,12 +59,12 @@ if url:
     except Exception as e:
         st.warning("Unable to fetch video info. Please check the URL.")
 
-# Center the download button with proper width
+# Center the download button
 col_left, col_center, col_right = st.columns([3, 2, 3])
 with col_center:
     download_clicked = st.button("Download", use_container_width=True)
 
-# Function to get yt-dlp format code based on quality selection
+# Format code function
 def get_format_code(quality):
     if quality == "360p":
         return "bestvideo[height=360]+bestaudio"
@@ -81,7 +81,7 @@ def get_format_code(quality):
     else:
         return "bestvideo+bestaudio"
 
-# Initialize download history in session state
+# Initialize session state for history
 if 'history' not in st.session_state:
     st.session_state.history = []
 
@@ -90,17 +90,21 @@ if download_clicked:
     if url:
         st.info(f"Starting download in **{quality}** quality...")
 
+        # Ensure downloads folder exists
+        os.makedirs("downloads", exist_ok=True)
+
         format_code = get_format_code(quality)
+
+        # Output file path
+        output_template = f"downloads/{filename.strip()}.%(ext)s" if filename.strip() else "downloads/%(title)s.%(ext)s"
 
         cmd = [
             "yt-dlp",
             "-f", format_code,
             "--merge-output-format", "mp4",
+            "-o", output_template,
             url
         ]
-
-        if filename.strip():
-            cmd += ["-o", filename.strip() + ".%(ext)s"]
 
         if quality == "MP3 only (audio)":
             cmd += ["-x", "--audio-format", "mp3"]
@@ -112,14 +116,13 @@ if download_clicked:
 
         if result.returncode == 0:
             st.success("Download completed successfully.")
-            # Add URL to download history
             st.session_state.history.append(url)
         else:
             st.error("Download failed. Please check the URL or try again.")
     else:
         st.warning("Please enter a valid YouTube URL.")
 
-# Show download history if any
+# Show download history
 if st.session_state.history:
     st.markdown("---")
     st.markdown("### Download History")
